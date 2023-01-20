@@ -1,4 +1,4 @@
-package basic_file_server;
+package multithreaded_server;
 
 import java.io.DataInputStream;
 import java.io.DataOutputStream;
@@ -12,7 +12,7 @@ import java.util.Scanner;
 
 public class Client {
 	public static void main(String[] args) {
-		String host = "192.168.164.101";
+		String host = "localhost";
 		int port = 9999;
 		Socket soc = null;
 
