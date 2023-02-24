@@ -1,5 +1,7 @@
 package ricm.nio.babystep2;
 
+import java.nio.ByteBuffer;
+
 public class ReaderAutomata {
 	public enum State {
 		IDLE, READING
@@ -22,7 +24,7 @@ public class ReaderAutomata {
 	}
 
 	public void setIdle() {
-		this.currentState = State.READING;
+		this.currentState = State.IDLE;
 		this.totalSize = 0;
 		this.receivedSize = 0;
 	}
@@ -35,12 +37,21 @@ public class ReaderAutomata {
 		return this.currentState;
 	}
 
-	public boolean addToMessage(byte[] data) throws Exception {
+	public boolean addToMessage(ByteBuffer bb) throws Exception {
 		if (this.currentState != State.READING)
 			throw new Exception();
+		byte[] data = bb.array();
 		for (int i = 0; i < data.length; i++) {
+			if (i + this.receivedSize >= this.totalSize)
+				return true;
+			// TODO Gérer taille messsage suivant
 			this.message[i + this.receivedSize] = data[i];
 		}
-		return this.message.length >= this.totalSize;
+		this.receivedSize += data.length;
+		return this.receivedSize >= this.totalSize;
+	}
+
+	public byte[] getMessage() {
+		return message;
 	}
 }

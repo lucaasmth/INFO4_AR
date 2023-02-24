@@ -19,7 +19,7 @@ import java.util.Iterator;
  */
 
 public class NioClient {
-	private static final int INBUF_SZ = 2048;
+	private static final int INBUF_SZ = 4;
 
 	// The client channel to communicate with the server
 	private SocketChannel sc;
@@ -43,6 +43,7 @@ public class NioClient {
 	int nloops;
 
 	ReaderAutomata readerAutomata;
+	WriterAutomata writerAutomata;
 
 	/**
 	 * NIO client initialization
@@ -56,6 +57,7 @@ public class NioClient {
 
 		this.first = payload;
 		this.readerAutomata = new ReaderAutomata();
+		this.writerAutomata = new WriterAutomata();
 
 		// create a selector
 		selector = SelectorProvider.provider().openSelector();
@@ -137,37 +139,37 @@ public class NioClient {
 		assert (this.skey == key);
 		assert (sc == key.channel());
 
-		// Let's read the message
-		inBuffer = ByteBuffer.allocate(INBUF_SZ);
-		int n = sc.read(inBuffer);
-		if (n == -1) {
-			key.cancel(); // communication with server is broken
-			sc.close();
-			return;
-		}
-
-		byte[] data = new byte[inBuffer.position()];
-		inBuffer.rewind();
-		inBuffer.get(data);
-
-		String msg = new String(data, Charset.forName("UTF-8"));
-		System.out.println("NioClient received msg[" + nloops + "]: " + msg);
+		System.out.println("NioClient received msg[" + nloops + "]: ");
+		int n;
 
 		switch (readerAutomata.getState()) {
 		case IDLE:
-			String[] msgSplit = msg.split(":");
-			if (!msgSplit[0].equals("taille"))
-				throw new IOException("Taille non reçue");
-			try {
-				int size = Integer.valueOf(msgSplit[1]);
-				readerAutomata.setReading(size);
-			} catch (NumberFormatException e) {
-				throw e;
+			if (inBuffer == null)
+				inBuffer = ByteBuffer.allocate(INBUF_SZ);
+			n = sc.read(inBuffer);
+			if (n == -1) {
+				key.cancel(); // communication with server is broken
+				sc.close();
+				return;
 			}
+			if (inBuffer.hasRemaining())
+				return;
+			inBuffer.rewind();
+			int size = inBuffer.getInt();
+			inBuffer.rewind();
+			System.out.println("Expecting a " + size + " bytes message");
+			this.readerAutomata.setReading(size);
 			break;
 		case READING:
 			try {
-				boolean finished = readerAutomata.addToMessage(data);
+				n = sc.read(inBuffer);
+				if (n == -1) {
+					key.cancel(); // communication with server is broken
+					sc.close();
+					return;
+				}
+				boolean finished = readerAutomata.addToMessage(inBuffer);
+				inBuffer.rewind();
 				if (!finished)
 					break;
 				System.out.println("Message totally received");
@@ -206,9 +208,14 @@ public class NioClient {
 		assert (this.skey == key);
 		assert (sc == key.channel());
 		// write the output buffer to the socket channel
-		sc.write(outBuffer);
+
+		sc.write(this.writerAutomata.getWriteBuffer());
 		// remove the write interest & set READ interest
-		key.interestOps(SelectionKey.OP_READ);
+		if (this.writerAutomata.isFinished()) {
+			skey.interestOps(SelectionKey.OP_READ);
+		} else {
+			skey.interestOps(SelectionKey.OP_WRITE | SelectionKey.OP_READ);
+		}
 	}
 
 	/**
@@ -218,10 +225,10 @@ public class NioClient {
 	 */
 	public void send(byte[] data, int offset, int count) {
 		// this is not optimized, we should try to reuse the same ByteBuffer
-		outBuffer = ByteBuffer.wrap(data, offset, count);
+		this.writerAutomata.sendMessage(data);
 
 		// register a WRITE interest
-		skey.interestOps(SelectionKey.OP_WRITE);
+		skey.interestOps(SelectionKey.OP_WRITE | SelectionKey.OP_READ);
 	}
 
 	public static void main(String args[]) throws IOException {
