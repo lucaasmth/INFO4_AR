@@ -1,4 +1,4 @@
-package chat_server_v1;
+package chat_server_v2;
 
 import java.rmi.NotBoundException;
 import java.rmi.RemoteException;
@@ -10,8 +10,9 @@ public class Client {
 	public static void main(String[] args) throws RemoteException, NotBoundException {
 		Scanner scanner = new Scanner(System.in);
 		Registry registry = LocateRegistry.getRegistry(args[1]);
-		IChatRoom chatRoom = (IChatRoom) registry.lookup("chatroom");
+		IChatRoomManager chatRoomManager = (IChatRoomManager) registry.lookup("chatRoomManager");
 		IParticipant me = new Participant(args[0]);
+		IChatRoom chatRoom = chatRoomManager.connect(args[2]);
 		chatRoom.connect(me);
 		while (true) {
 			String message = scanner.nextLine();

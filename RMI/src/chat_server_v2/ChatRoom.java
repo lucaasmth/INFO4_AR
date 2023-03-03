@@ -1,4 +1,4 @@
-package chat_server_v1;
+package chat_server_v2;
 
 import java.rmi.RemoteException;
 import java.rmi.server.UnicastRemoteObject;
@@ -60,10 +60,20 @@ public class ChatRoom extends UnicastRemoteObject implements IChatRoom {
 	public void send(IParticipant p, String msg) throws RemoteException {
 		// TODO Auto-generated method stub
 		Iterator<IParticipant> iterator = participants.iterator();
-		String p_name = p.name();
+		String p_name = "un participant";
+		try {
+			p_name = p.name();
+		} catch (Exception e) {
+
+		}
+
 		while (iterator.hasNext()) {
 			IParticipant participant = iterator.next();
-			participant.receive(p_name, msg);
+			try {
+				participant.receive(p_name, msg);
+			} catch (Exception e) {
+				leave(participant);
+			}
 		}
 
 	}
