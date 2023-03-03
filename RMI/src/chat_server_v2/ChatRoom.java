@@ -13,11 +13,13 @@ public class ChatRoom extends UnicastRemoteObject implements IChatRoom {
 	private static final long serialVersionUID = 6622009205544553308L;
 	private String name;
 	private ArrayList<IParticipant> participants;
+	private ArrayList<String[]> messages;
 
 	protected ChatRoom(String name) throws RemoteException {
 		super();
 		this.name = name;
 		this.participants = new ArrayList<IParticipant>();
+		this.messages = new ArrayList<String[]>();
 		// TODO Auto-generated constructor stub
 	}
 
@@ -31,8 +33,12 @@ public class ChatRoom extends UnicastRemoteObject implements IChatRoom {
 	public void connect(IParticipant p) throws RemoteException {
 		// TODO Auto-generated method stub
 		this.participants.add(p);
+		Iterator iter = messages.iterator();
+		while (iter.hasNext()) {
+			String[] m = (String[]) iter.next();
+			p.receive(m[0], m[1]);
+		}
 		send(p, "just entered in the chatroom " + this.name());
-
 	}
 
 	@Override
@@ -66,7 +72,6 @@ public class ChatRoom extends UnicastRemoteObject implements IChatRoom {
 		} catch (Exception e) {
 
 		}
-
 		while (iterator.hasNext()) {
 			IParticipant participant = iterator.next();
 			try {
@@ -75,7 +80,8 @@ public class ChatRoom extends UnicastRemoteObject implements IChatRoom {
 				leave(participant);
 			}
 		}
-
+		String[] m = { p_name, msg };
+		messages.add(m);
 	}
 
 }
