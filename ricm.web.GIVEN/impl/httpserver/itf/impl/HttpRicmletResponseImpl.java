@@ -13,8 +13,7 @@ public class HttpRicmletResponseImpl extends HttpResponseImpl implements HttpRic
 
 	@Override
 	public void setCookie(String name, String value) {
-		// TODO Auto-generated method stub
-
+		m_ps.println("Set-Cookie: " + name + "=" + value);
 	}
 
 }

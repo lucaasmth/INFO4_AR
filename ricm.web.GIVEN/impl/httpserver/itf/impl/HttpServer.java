@@ -73,9 +73,18 @@ public class HttpServer {
 		StringTokenizer parseline = new StringTokenizer(startline);
 		String method = parseline.nextToken().toUpperCase();
 		String ressname = parseline.nextToken();
+		String next_line = br.readLine();
+		String cookies = null;
+		while (!next_line.equals("")) {
+			if (next_line.split(":")[0].toLowerCase().equals("cookie")) {
+				cookies = next_line.split(":")[1].trim();
+				break;
+			}
+			next_line = br.readLine();
+		}
 		if (method.equals("GET")) {
 			if (ressname.split("/")[1].equals("ricmlets")) {
-				request = new HttpRicmletRequestImpl(this, method, ressname, br);
+				request = new HttpRicmletRequestImpl(this, method, ressname, br, cookies);
 			} else {
 				request = new HttpStaticRequest(this, method, ressname);
 			}
