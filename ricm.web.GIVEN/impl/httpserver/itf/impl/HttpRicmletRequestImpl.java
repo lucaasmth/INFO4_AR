@@ -29,15 +29,21 @@ public class HttpRicmletRequestImpl extends HttpRicmletRequest {
 
 		// Parse cookies and store them into a Hashmap
 		cookies = new HashMap<String, String>();
+		if (cookiesString == null)
+			return;
 		for (String cookie : cookiesString.split(";")) {
-			cookies.put(cookie.split("=")[0], cookie.split("=")[1]);
+			cookies.put(cookie.split("=")[0].trim(), cookie.split("=")[1]);
 		}
 	}
 
 	@Override
 	public HttpSession getSession() {
-		// TODO Auto-generated method stub
-		return null;
+		String sessionId = getCookie("session-id");
+		System.out.println(sessionId);
+		if (sessionId == null) {
+			return m_hs.getSession(-1);
+		}
+		return m_hs.getSession(Integer.parseInt(sessionId));
 	}
 
 	@Override

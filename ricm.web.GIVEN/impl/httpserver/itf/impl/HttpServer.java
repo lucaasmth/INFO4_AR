@@ -9,12 +9,14 @@ import java.net.MalformedURLException;
 import java.net.ServerSocket;
 import java.net.Socket;
 import java.util.HashMap;
+import java.util.Map;
 import java.util.StringTokenizer;
 
 import httpserver.itf.HttpRequest;
 import httpserver.itf.HttpResponse;
 import httpserver.itf.HttpRicmlet;
 import httpserver.itf.HttpRicmletRequest;
+import httpserver.itf.HttpSession;
 
 /**
  * Basic HTTP Server Implementation
@@ -30,6 +32,8 @@ public class HttpServer {
 	private File m_folder; // default folder for accessing static resources (files)
 	private ServerSocket m_ssoc;
 	private HashMap<String, HttpRicmlet> ricmletInstances;
+	private HashMap<Integer, HttpSession> sessions;
+	private int sessionIndex;
 
 	protected HttpServer(int port, String folderName) {
 		m_port = port;
@@ -37,6 +41,8 @@ public class HttpServer {
 			folderName = folderName + File.separator;
 		m_folder = new File(folderName);
 		ricmletInstances = new HashMap<String, HttpRicmlet>();
+		sessions = new HashMap<Integer, HttpSession>();
+		sessionIndex = 0;
 		try {
 			m_ssoc = new ServerSocket(m_port);
 			System.out.println("HttpServer started on port " + m_port);
@@ -98,8 +104,35 @@ public class HttpServer {
 	 */
 	public HttpResponse getResponse(HttpRequest req, PrintStream ps) {
 		if (req instanceof HttpRicmletRequest)
-			return new HttpRicmletResponseImpl(this, req, ps);
+			return new HttpRicmletResponseImpl(this, (HttpRicmletRequest) req, ps);
 		return new HttpResponseImpl(this, req, ps);
+	}
+
+	public HttpSession getSession(int sessionId) {
+		deleteOldSessions();
+		if (sessionId == -1) {
+			HttpSession newSession = new HttpSessionImpl(sessionIndex++);
+			sessions.put(Integer.parseInt(newSession.getId()), newSession);
+			newSession.setValue("access", System.currentTimeMillis());
+			return newSession;
+		}
+		HttpSession session = sessions.get(sessionId);
+		if (session == null) {
+			HttpSession newSession = new HttpSessionImpl(sessionId);
+			sessions.put(Integer.parseInt(newSession.getId()), newSession);
+			newSession.setValue("access", System.currentTimeMillis());
+			return newSession;
+		}
+		session.setValue("access", System.currentTimeMillis());
+		return sessions.get(sessionId);
+	}
+
+	private void deleteOldSessions() {
+		for (Map.Entry<Integer, HttpSession> set : sessions.entrySet()) {
+			if (((long) set.getValue().getValue("access")) + (10 * 1000) < System.currentTimeMillis()) {
+				sessions.remove(set.getKey());
+			}
+		}
 	}
 
 	/*
